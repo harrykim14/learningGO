@@ -1,4 +1,4 @@
-# GO를 배워보자
+# Go를 배워보자
 
 - **강의명** : 현역 실리콘밸리 엔지니어가 가르치는 Go입문 + 응용으로 비트코인 시스템 트레이딩 핀테크 어플리케이션의 개발 ([現役シリコンバレーエンジニアが教える Go 入門 + 応用でビットコインのシストレ Fintech アプリの開発](https://www.udemy.com/course/go-fintech/))
 
@@ -76,6 +76,86 @@ func sum() (params ...int) result int {
     return
 }
 
+```
+
+</div>
+</details>
+
+## 2. Go의 문법과 포인터
+
+<details>
+<summary> (2-1) 문법 예제 코드 </summary>
+<div markdonw="2-1">
+
+```go
+package main // package 형 언어
+
+
+import "fmt"
+
+func main() {
+	num := 6
+	if num%2 == 0 { // JS와는 달리 괄호 없이 조건문이 들어감
+		fmt.Println("by 2")
+	} else {
+		fmt.Println("else")
+	}
+
+	for i := 0; i < 6; i++ { // 당연히 조건문 안에서도 형정의의 축약형을 사용할 수 있다
+		if i == 3 {
+			fmt.Println("continue")
+			continue
+		}
+		if i > 5 {
+			fmt.Println("break")
+			break
+		}
+		fmt.Println(i)
+	}
+
+	l := []string{"python", "java", "go"}
+
+	for _, v := range l { // 이 부분은 파이썬과 비슷함
+		fmt.Print(v + ` `)
+	}
+
+	os := "window"
+    // 스위치도 괄호만 없고 똑같지만 대신 break가 없다
+	switch os {
+	case "mac":
+		fmt.Println("Mac!")
+	case "window":
+		fmt.Println("Window!")
+	default:
+		fmt.Println("default...")
+	}
+
+}
+
+```
+
+</div>
+</details>
+
+<details>
+<summary> (2-2) 포인터 예제 코드 </summary>
+<div markdonw="2-1">
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	var n int = 100
+	fmt.Println(n) // 100
+
+	fmt.Println(&n) // 0xc000014088
+
+	var p *int = &n
+	fmt.Println(p) // 0xc000014088
+	fmt.Println(*p) // 100
+}
 ```
 
 </div>
