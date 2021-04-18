@@ -146,16 +146,78 @@ package main
 
 import "fmt"
 
+func one(x *int) {
+	*x = 1
+}
+
 func main() {
 	var n int = 100
 	fmt.Println(n) // 100
-
 	fmt.Println(&n) // 0xc000014088
-
 	var p *int = &n
 	fmt.Println(p) // 0xc000014088
 	fmt.Println(*p) // 100
+
+    one(&n)
+	fmt.Println(n) // 1
+	fmt.Println(&n) // 0xc000014088
+
+    var p1 *int = new(int)
+	fmt.Println(p1) // 0xc0000140a8
+    fmt.Println(*p1) // 0
+	var p2 *int
+	fmt.Println(p2) // <nil>
+    fmt.Printf("%T\n", p2) // *int
+
+    m := make(map[string]int)
+	fmt.Printf("%T\n", m)
+    // fmt.Printf("%T\n", *m)
+    // *m 을 보려고 하면 invalid operation: cannot indirect m (variable of type map[string]int)라고 표시된다
+    // make로 생성된 자료구조는 포인터가 존재하지 않음
 }
+```
+
+- struct 예제
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+type Vertex struct {
+	X int
+	Y int
+	S string
+}
+
+func main() {
+	v := Vertex{X: 1, Y: 2}
+	fmt.Println(v) // {1 2 }
+
+	v.X = 100
+	fmt.Println(v.X, v.Y) // 100 2
+
+	v2 := Vertex{X: 1}
+	fmt.Println(v2) // {1 0 }
+
+	v3 := Vertex{1, 2, "test"}
+	fmt.Println(v3) // {1 2 test}
+
+	v4 := Vertex{}
+	fmt.Printf("%T %v\n", v4, v4) // main.Vertex {0 0 }
+
+	var v5 Vertex
+	fmt.Printf("%T %v\n", v5, v5) // main.Vertex {0 0 }
+
+	v6 := new(Vertex)
+	fmt.Printf("%T %v\n", v6, v6) // *main.Vertex &{0 0 }
+
+	v7 := &Vertex{}
+	fmt.Printf("%T %v\n", v7, v7) //*main.Vertex &{0 0 }
+}
+
 ```
 
 </div>
