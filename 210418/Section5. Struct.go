@@ -30,8 +30,8 @@ func main() {
 	fmt.Printf("%T %v\n", v5, v5) // main.Vertex {0 0 }
 
 	v6 := new(Vertex)
-	fmt.Printf("%T %v\n", v6, v6)
+	fmt.Printf("%T %v\n", v6, v6) // *main.Vertex &{0 0 }
 
 	v7 := &Vertex{}
-	fmt.Printf("%T %v\n", v7, v7)
+	fmt.Printf("%T %v\n", v7, v7) //*main.Vertex &{0 0 }
 }

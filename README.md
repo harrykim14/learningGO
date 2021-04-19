@@ -139,7 +139,7 @@ func main() {
 
 <details>
 <summary> (2-2) 포인터 예제 코드 </summary>
-<div markdonw="2-1">
+<div markdonw="2-2">
 
 ```go
 package main
@@ -216,6 +216,280 @@ func main() {
 
 	v7 := &Vertex{}
 	fmt.Printf("%T %v\n", v7, v7) //*main.Vertex &{0 0 }
+}
+
+```
+
+</div>
+</details>
+
+<details>
+<summary> (2-3) Go의 메소드와 포인터 리시버</summary>
+<div markdonw="2-3">
+
+```go
+package main
+
+import "fmt"
+
+type Vertex struct {
+	X, Y int
+}
+
+// Vertex형의 v라는 변수에 Area()를 연결 (Go 메소드)
+func (v Vertex) Area() int {
+	return v.X * v.Y
+}
+
+// Vertex의 주소 내에서 직접 조작 (포인터 리시버)
+func (v *Vertex) Scale(i int) {
+	v.X = v.X * i
+	v.Y = v.Y * i
+}
+
+func Area(v Vertex) int {
+	return v.X * v.Y
+}
+
+func main() {
+	v := Vertex{3, 4}
+	fmt.Println(Area(v))  // 12
+	fmt.Println(v.Area()) // 12
+
+	v.Scale(10)
+	fmt.Println(v.Area()) // 1200
+}
+
+```
+
+</div>
+</detials>
+
+<details>
+<summary> (2-4) struct의 캡슐화</summary>
+<div markdonw="2-4">
+
+```go
+package main
+
+import "fmt"
+
+// 소문자로 작성하면 private의 효과를 갖는다
+type Vertex struct {
+	x, y int
+}
+
+func (v Vertex) Area() int {
+	return v.x * v.y
+}
+
+func (v *Vertex) Scale(i int) {
+	v.x = v.x * i
+	v.y = v.y * i
+}
+
+func Area(v Vertex) int {
+	return v.x * v.y
+}
+
+// x, y를 받는 New함수(New는 디자인패턴)를 만들어 Vertex의 포인터를 리턴하도록 함
+// 이 때, 리턴하는 것은 Vertex{x, y}로 만들어진 struct의 주소
+func New(x, y int) *Vertex {
+	return &Vertex{x, y}
+}
+
+func main() {
+	v := New(3, 4)
+	v.Scale(10)
+	fmt.Println(v.Area()) // 1200
+}
+
+```
+
+</div>
+</details>
+
+<details>
+<summary> (2-5) Embeded </summary>
+<div markdonw="2-5">
+
+```go
+package main
+
+import "fmt"
+
+type Vertex struct {
+	x, y int
+}
+
+func (v Vertex) Area() int {
+	return v.x * v.y
+}
+
+func (v *Vertex) Scale(i int) {
+	v.x = v.x * i
+	v.y = v.y * i
+}
+
+type Vertex3D struct {
+	Vertex // super() 같은 효과
+	z      int
+}
+
+func (v Vertex3D) Area3D() int {
+	return v.x * v.y * v.z
+}
+
+func (v *Vertex3D) Scale3D(i int) {
+	v.x = v.x * i
+	v.y = v.y * i
+	v.z = v.z * i
+}
+
+func New(x, y, z int) *Vertex3D {
+	return &Vertex3D{Vertex{x, y}, z}
+}
+
+func main() {
+	v := New(3, 4, 5)
+	v.Scale3D(10)
+	fmt.Println(v.Area3D()) // 30 * 40 * 50 = 60000
+}
+```
+
+</div>
+</details>
+
+<details>
+<summary> (2-6) non-struct 메소드 </summary>
+<div markdonw="2-6">
+
+```go
+package main
+
+import "fmt"
+
+type MyInt int
+
+func (i MyInt) Double() int {
+	fmt.Printf("%T %v\n", i, i) // main.MyInt 10
+	fmt.Printf("%T %v\n", 1, 1) // int 1
+	return int(i * 2)
+}
+
+func main() {
+	myInt := MyInt(10)
+	fmt.Println(myInt.Double()) // 20
+}
+```
+
+</div>
+</details>
+
+<details>
+<summary> (2-7) 인터페이스와 타입 단언(Type Assertion) </summary>
+<div markdonw="2-7">
+
+```go
+// package main
+
+import "fmt"
+
+type Human interface {
+	Say()
+}
+
+type Person struct {
+	Name string
+}
+
+func (p *Person) Say() {
+	p.Name = "Mr." + p.Name
+	fmt.Println(p.Name)
+}
+
+func main() {
+	var mike Human = &Person{"Mike"}
+	mike.Say()
+}
+
+/* -------------------------------- */
+
+package main
+
+import "fmt"
+
+func do(i interface{}) {
+	switch v := i.(type) { // switch-type문
+	case int:
+		fmt.Println(v * 2)
+	case string:
+		fmt.Println(v + "!")
+	default:
+		fmt.Printf("I don't knwo %T\n", v)
+	}
+}
+
+func main() {
+	var i interface{} = 10 // i는 int형이 아닌 인터페이스임
+	do(i)                  // 20
+	do("Mike")             // Mike!
+	do(true)               // I don't knwo bool
+}
+```
+
+</div>
+</details>
+
+<details>
+<summary> (2-8) String()과 Error() </summary>
+<div markdonw="2-8">
+
+```go
+package main
+
+import "fmt"
+
+type Person struct {
+	Name string
+	Age  int
+}
+
+// fmt에 있는 String()을 오버로딩 한 것
+func (p Person) String() string {
+	return fmt.Sprintf("My name is %v", p.Name)
+}
+
+func main() {
+	mike := Person{"Mike", 22}
+	fmt.Println(mike.String())
+}
+
+/* -------------------------------- */
+package main
+
+import "fmt"
+
+type UserNotFound struct {
+	Username string
+}
+
+func (e *UserNotFound) Error() string {
+	return fmt.Sprintf("User not found: %v", e.Username)
+}
+
+func myFunc() error {
+	ok := false
+	if ok {
+		return nil
+	}
+	return &UserNotFound{Username: "mike"}
+}
+
+func main() {
+	if err := myFunc(); err != nil {
+		fmt.Println(err)
+	}
 }
 
 ```
