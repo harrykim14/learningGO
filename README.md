@@ -263,7 +263,7 @@ func main() {
 ```
 
 </div>
-</detials>
+</details>
 
 <details>
 <summary> (2-4) struct의 캡슐화</summary>
