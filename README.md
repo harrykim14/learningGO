@@ -678,5 +678,177 @@ func main() {
 }
 ```
 
+- goroutine과 channel을 사용한 fan-out/fan-in 패턴
+  - 이 패턴을 사용한 예시 : 유저 정보를 받아 정보를 처리하고 이메일을 보내는 파이프라인 작업을 수행 등
+
+```go
+package main
+
+import "fmt"
+
+func producer(first chan int) {
+	defer close(first)
+	for i := 0; i < 10; i++ {
+		first <- i
+	}
+}
+
+func multi2(first <-chan int, second chan<- int) {
+	defer close(second)
+	for i := range first {
+		second <- i * 2
+	}
+}
+
+func mulit4(second <-chan int, third chan<- int) {
+	defer close(third)
+	for i := range second {
+		third <- i * 4
+	}
+}
+
+func main() {
+	first := make(chan int)
+	second := make(chan int)
+	third := make(chan int)
+
+	go producer(first)
+	go multi2(first, second)
+	go multi2(second, third)
+
+	for result := range third {
+		fmt.Println(result)
+	}
+}
+
+```
+
+- select를 사용한 병렬처리
+
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func goroutine1(ch chan string) {
+	for {
+		ch <- "packet from 1"
+		time.Sleep(3 * time.Second)
+	}
+}
+
+func goroutine2(ch chan string) {
+	for {
+		ch <- "packet from 2"
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func main() {
+	c1 := make(chan string)
+	c2 := make(chan string)
+
+	go goroutine1(c1)
+	go goroutine2(c2)
+
+	for {
+		select {
+		case msg1 := <-c1:
+			fmt.Println(msg1)
+		case msg2 := <-c2:
+			fmt.Println(msg2)
+		}
+	}
+}
+```
+
+- default selection과 for break
+
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+	tick := time.Tick(100 * time.Millisecond)
+	boom := time.Tick(500 * time.Millisecond)
+
+OuterLoop:
+	for {
+		select {
+		case <-tick:
+			fmt.Println("tick.")
+		case <-boom:
+			fmt.Println("Boom!")
+			break OuterLoop
+		default:
+			fmt.Println("    .")
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+}
+```
+
+</div>
+</details>
+
+<details>
+<summary> (3-3) sync.Mutex</summary>
+<div markdown="3-3">
+
+- 여러 goroutine에서 같은 객체를 공유한다면 어떤 상황에서는 동시간에 해당 객체를 참조할 수 있는데 이럴 경우에 오류가 발생 할 수 있음
+- 이를 안전하게 처리하기 위한 동기화 객체가 Mutex
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+type Counter struct {
+	v   map[string]int
+	mux sync.Mutex
+}
+
+func (c *Counter) Inc(key string) {
+	c.mux.Lock()
+	c.v[key]++
+	c.mux.Unlock()
+}
+
+func (c *Counter) Value(key string) int {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	return c.v[key]
+}
+
+// 같은 키값을 동시에 읽으면 오류남
+func main() {
+	c := Counter{v: make(map[string]int)}
+
+	go func() {
+		for i := 0; i < 10; i++ {
+			c.Inc("key")
+		}
+	}()
+	go func() {
+		for i := 0; i < 10; i++ {
+			c.Inc("key")
+		}
+	}()
+	time.Sleep(1 * time.Second)
+	fmt.Println(c, c.Value("key"))
+}
+```
+
 </div>
 </details>
