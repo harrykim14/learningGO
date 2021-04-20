@@ -496,3 +496,187 @@ func main() {
 
 </div>
 </details>
+
+## 3. Go의 goroutine과 channel
+
+<details>
+<summary> (3-1) goroutine과 sync.WaitGroup </summary>
+<div markdown="3-1">
+
+```go
+package main
+
+import (
+	"fmt"
+	// "time"
+	"sync"
+)
+
+func goroutine(s string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for i := 0; i < 5; i++ {
+		// time.Sleep(100 * time.Millisecond)
+		fmt.Println(s)
+	}
+}
+
+func normal(s string) {
+	for i := 0; i < 5; i++ {
+		// time.Sleep(100 * time.Millisecond)
+		fmt.Println(s)
+	}
+}
+
+func main() {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go goroutine("world")
+	normal("hello")
+
+	wg.Wait()
+}
+
+```
+
+</div>
+</details>
+
+<details>
+<summary> (3-2) channel과 buffered channel </summary>
+<div markdown="3-2">
+
+- sync.WaitGroup를 사용해 기다리지 않아도 channel을 통해 루틴간의 통신이 가능
+- goroutine의 실행 순서가 일정하지 않아 출력값 15와 120이 실행할 때마다 달라질 수 있다
+
+```go
+package main
+
+import "fmt"
+
+func goroutine1(s []int, c chan int) {
+	sum := 0
+	for _, v := range s {
+		sum += v
+	}
+	c <- sum
+}
+
+func goroutine2(s []int, c chan int) {
+	mul := 1
+	for _, v := range s {
+		mul *= v
+	}
+	c <- mul
+}
+
+func main() {
+	s := []int{1, 2, 3, 4, 5}
+	c := make(chan int)
+
+	go goroutine1(s, c)
+	go goroutine2(s, c)
+	x := <-c
+	fmt.Println(x)
+	y := <-c
+	fmt.Println(y)
+}
+```
+
+- 채널을 만들 때 make 함수의 두번째 인자로 버퍼를 설정할 수 있는데 이 버퍼의 갯수에 따라 받을 수 있는 인자의 수가 결정된다
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	ch := make(chan int, 2)
+	ch <- 100
+	fmt.Println(len(ch))
+	ch <- 200
+	fmt.Println(len(ch))
+	// 버퍼를 2개로 설정했으므로 ch는 2개의 값만을 받을 수 있다
+
+	x := <-ch      // 여기서 ch 내 버퍼에서 값을 하나 끄집어 냄
+	fmt.Println(x) // 100
+
+	fmt.Println(len(ch)) // ch의 길이는 1이 된다
+
+	ch <- 300            // 값을 하나 집어넣으면
+	fmt.Println(len(ch)) // 2가 된다
+
+	close(ch)
+	//len 이 있다는 뜻은 채널은 순환 가능한 iterator이다
+	for c := range ch {
+		fmt.Println(c)
+	}
+	// 하지만 이렇게 하면 오류가 남 -> 순환하기 전에 채널을 닫아주어야 함
+}
+```
+
+- goroutine과 channel을 써서 합을 구하는 과정을 출력하기
+
+```go
+package main
+
+import "fmt"
+
+func goroutine1(s []int, c chan int) {
+	sum := 0
+	for _, v := range s {
+		sum += v
+		c <- sum
+	}
+	close(c)
+}
+
+func main() {
+	s := []int{1, 2, 3, 4, 5}
+	c := make(chan int, len(s))
+
+	go goroutine1(s, c)
+	for i := range c {
+		fmt.Println(i)
+	}
+}
+```
+
+- goroutine과 channel을 사용한 Producer/Consumer 패턴
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+func producer(ch chan int, i int) {
+	ch <- i * 2
+}
+
+func consumer(ch chan int, wg *sync.WaitGroup) {
+	for i := range ch {
+		fmt.Println("process", i*1000)
+		wg.Done()
+	}
+}
+
+func main() {
+	var wg sync.WaitGroup
+	ch := make(chan int)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go producer(ch, i)
+	}
+
+	go consumer(ch, &wg)
+	wg.Wait()
+	close(ch)
+}
+```
+
+</div>
+</details>
