@@ -852,3 +852,188 @@ func main() {
 
 </div>
 </details>
+
+## 4. package, public과 private 그리고 테스트 모듈과 실제 테스트
+
+<details>
+<summary> (4-1) package, public과 private </summary>
+<div markdown="4-1">
+
+```go
+/*
+"GO111MODULE"
+기존 GOPATH와 vendor/에 따라 동작하던 go 커맨드와의 공존을 위한 GO111MODULE이라는 임시 환경변수가 생김(~ 1.11 ver.)
+`go env -w GO111MODULE=on`은 GOPATH에 전혀 관계없이 Go modules의 방식대로 동작하고
+`go env -w GO111MODULE=off`는 Go modules는 전혀 사용되지 않고 기존에 사용되던 방식대로 GOPATH와 verdor/를 통해 go 커맨드가 동작함
+`go env -w GO111MODULE=auto`의 경우 GOPATH/src 내부에서의 go 커맨드는 기존의 방식대로 외부에서의 go 커맨드는 Go modules의 방식대로 동작함
+*/
+
+package main
+
+import (
+	"210421/mylib"
+	"210421/mylib/under"
+	"fmt"
+)
+
+func main() {
+	s := []int{1, 2, 3, 4, 5}
+	fmt.Println(mylib.Average(s))
+	mylib.Say()
+
+	person := under.Person{Name: "Mike", Age: 20}
+	fmt.Print(person.Name + ` `)
+	under.Hello() // 함수의 첫글자를 소문자로 작성하면 private임을 잊지 말자
+}
+/*-----------------------------------------------------*/
+// /PATH/mylib/math.go
+package mylib
+
+func Average(s []int) int {
+	total := 0
+	for _, i := range s {
+		total += i
+	}
+	return int(total / len(s))
+}
+/*-----------------------------------------------------*/
+// /PATH/mylib/say.go
+package mylib
+
+import "fmt"
+
+func Say() {
+	fmt.Println("Hello, world!")
+}
+/*-----------------------------------------------------*/
+// /PATH/mylib/under/hello.go
+package under
+
+import "fmt"
+
+type Person struct {
+	Name string
+	Age  int
+}
+
+func Hello() {
+	fmt.Println("Hello!")
+}
+```
+
+</div>
+</details>
+
+<details>
+<summary> (4-2) 테스트 모듈과 실제 테스트 </summary>
+<div markdown="4-2">
+
+- 파일 내에 testing 모듈을 import하고 테스트할 함수의 변수로 `t *testing.T`를 넣는다
+
+```go
+// mylib/math_test.go
+package mylib
+
+import "testing"
+
+func TestAverage(t *testing.T) {
+	v := Average([]int{1, 2, 3, 4, 5})
+
+	if v != 3 {
+		t.Error("Expected 3, got", v)
+	}
+}
+
+```
+
+- vscode에서 모듈을 테스트하는 방법에는 두가지 방법이 있는데 하나는 터미널에서 `go test ./...`와 같이 디렉토리 전체를 테스트하는 것이고 나머지는 launch.json에 Launch test function를 명시하고 기본 매개변수로 해당 파일을 넘겨주는 것
+
+```json
+// launch.json
+"configurations": [
+	{
+        "name": "Launch test function",
+        "type": "go",
+        "request": "launch",
+        "mode": "test",
+        "program": "${workspaceFolder}/210421/mylib",
+        "args": [
+            "-test.v",
+        ]
+    },
+	// 이 밑에는 launch 항목이 따로 있음
+]
+```
+
+**실행 예제**
+
+- 터미널에서 실행했을 때
+
+```cli
+PS %GOPATH%src> go test 210421/mylib
+ok      210421/mylib    0.085s
+```
+
+- F5로 Launch test function을 실행했을 때 (디버그 콘솔)
+
+```
+API server listening at: 127.0.0.1:19984
+=== RUN   TestAverage
+--- PASS: TestAverage (0.00s)
+PASS
+```
+
+- go의 테스팅은 매우 기본적인 것만 제공하므로 Ginkgo 혹은 Gomega의 테스트 라이브러리를 사용할 수도 있다
+
+</div>
+</details>
+
+<details>
+<summary> (4-3) 그 외 알아두면 좋은 것들 </summary>
+<div markdown="4-3">
+
+- gofmt : eslint나 prettier 같은 코드 스타일 정리 커맨드
+- [서드 파티 패키지 검색 페이지](https://pkg.go.dev/?utm_source=godoc)
+- 강의 내에서 talib 패키지를 다운로드
+
+```
+go get github.com/markcheno/go-talib
+go get github.com/markcheno/go-quote
+```
+
+- 예제 코드를 실행해보기
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/markcheno/go-quote"
+	"github.com/markcheno/go-talib"
+)
+
+func main() {
+	spy, _ := quote.NewQuoteFromYahoo("spy", "2016-01-01", "2016-04-01", quote.Daily, true)
+	fmt.Print(spy.CSV())
+	rsi2 := talib.Rsi(spy.Close, 2)
+	fmt.Println(rsi2)
+}
+```
+
+- 실행 결과
+
+```
+datetime,open,high,low,close,volume
+2016-01-04 00:00,200.49,201.03,198.59,181.92,222353500.00
+2016-01-05 00:00,201.40,201.90,200.05,182.23,110845800.00
+2016-01-06 00:00,198.34,200.06,197.60,179.93,152112600.00
+2016-01-07 00:00,195.33,197.44,193.59,175.61,213436100.00
+...
+2016-03-31 00:00,205.91,206.41,205.33,186.95,94584100.00
+```
+
+- godoc (go의 공식문서 커맨드) : `go get golang.org/x/tools/cmd/godoc`로 다운로드하면 언제든 공식 문서를 참조 할 수 있음
+
+</div>
+</details>
