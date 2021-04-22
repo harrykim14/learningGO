@@ -1037,3 +1037,207 @@ datetime,open,high,low,close,volume
 
 </div>
 </details>
+
+## ext) 편리한 패키지와 네트워크에 관련된 라이브러리
+
+<details>
+<summary> (ex-1) 편리한 패키지 </summary>
+<div markdown="ex-1">
+
+1. time
+
+```go
+/*
+const (
+    ANSIC       = "Mon Jan _2 15:04:05 2006"
+    UnixDate    = "Mon Jan _2 15:04:05 MST 2006"
+    RubyDate    = "Mon Jan 02 15:04:05 -0700 2006"
+    RFC822      = "02 Jan 06 15:04 MST"
+    RFC822Z     = "02 Jan 06 15:04 -0700" // RFC822 with numeric zone
+    RFC850      = "Monday, 02-Jan-06 15:04:05 MST"
+    RFC1123     = "Mon, 02 Jan 2006 15:04:05 MST"
+    RFC1123Z    = "Mon, 02 Jan 2006 15:04:05 -0700" // RFC1123 with numeric zone
+    RFC3339     = "2006-01-02T15:04:05Z07:00"
+    RFC3339Nano = "2006-01-02T15:04:05.999999999Z07:00"
+    Kitchen     = "3:04PM"
+    // Handy time stamps.
+    Stamp      = "Jan _2 15:04:05"
+    StampMilli = "Jan _2 15:04:05.000"
+    StampMicro = "Jan _2 15:04:05.000000"
+    StampNano  = "Jan _2 15:04:05.000000000"
+)
+*/
+package sublib
+
+import (
+	"fmt"
+	"time"
+)
+
+func TimeModuleExample() {
+	t := time.Now()
+	fmt.Println(t) // 2021-04-22 11:04:35.6950007 +0900 KST m=+0.002823501
+	fmt.Println(t.Format(time.RFC3339)) // 2021-04-22T11:04:35+09:00
+	fmt.Println(t.Year(), t.Month(), t.Day()) // 2021 April 22
+}
+```
+
+2. regexp
+
+```go
+package sublib
+
+import (
+	"fmt"
+	"regexp"
+)
+
+func RegexpExample() {
+	match, _ := regexp.MatchString("a([a-z]+)e", "apple")
+	fmt.Println(match) // true
+
+	r := regexp.MustCompile("a([a-z]+)e")
+	ms := r.MatchString("apple")
+	fmt.Println(ms) // true
+
+	r2 := regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
+	fs := r2.FindString("/view/test")
+	fmt.Println(fs) // /view/test
+
+	fss := r2.FindStringSubmatch("/view/test")
+	fmt.Println(fss, fss[0], fss[1], fss[2]) // [/view/test view test] /view/test view test
+}
+```
+
+3. sort
+
+```go
+package sublib
+
+import (
+	"fmt"
+	"sort"
+)
+
+func SortArr() {
+	i := []int{5, 3, 2, 8, 7}
+	s := []string{"d", "a", "f"}
+	p := []struct {
+		Name string
+		Age  int
+	}{
+		{"Nancy", 20},
+		{"Vera", 40},
+		{"Mike", 30},
+		{"Bob", 50},
+	}
+
+	fmt.Println(i, s, p) // [5 3 2 8 7] [d a f] [{Nancy 20} {Vera 40} {Mike 30} {Bob 50}]
+	sort.Ints(i)
+	sort.Strings(s)
+	sort.Slice(p, func(i, j int) bool { return p[i].Name < p[j].Name })
+	fmt.Println(i, s, p) // [2 3 5 7 8] [a d f] [{Bob 50} {Mike 30} {Nancy 20} {Vera 40}]
+	sort.Slice(p, func(i, j int) bool { return p[i].Age < p[j].Age })
+	fmt.Println(i, s, p) // [2 3 5 7 8] [a d f] [{Nancy 20} {Mike 30} {Vera 40} {Bob 50}]
+
+
+}
+```
+
+4. iota
+
+```go
+package sublib
+
+import "fmt"
+
+const (
+	c1 = iota
+	c2
+	c3
+)
+
+const (
+	_      = iota
+	KB int = 1 << (10 * iota)
+	MB
+	GB
+	TB
+)
+
+func IotaExample() {
+	fmt.Println(c1, c2, c3) // 0 1 2
+	fmt.Println(KB, MB, GB, TB) // 1024 1048576 1073741824 1099511627776
+}
+```
+
+5. context
+
+```go
+package sublib
+
+import (
+	"context"
+	"fmt"
+	"time"
+)
+
+func longProcess(ctx context.Context, ch chan string) {
+	fmt.Println("run")
+	time.Sleep(4 * time.Second)
+	fmt.Println("finish")
+	ch <- "result"
+}
+
+func ContextExample() {
+	ch := make(chan string)
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	go longProcess(ctx, ch)
+
+CTXLOOP:
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println(ctx.Err())
+			// 함수의 실행 시간이 3초를 넘어가므로 이 케이스가 실행됨
+			// context deadline exceeded
+			break CTXLOOP
+		case <-ch:
+			fmt.Println("Success")
+			break CTXLOOP
+		}
+	}
+}
+
+```
+
+6. ioutil
+
+```go
+package sublib
+
+import (
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"log"
+)
+
+func IoutilExample() {
+	content, err := ioutil.ReadFile("example.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(content)) // Example text
+
+	r := bytes.NewBuffer([]byte("abc"))
+	content2, _ := ioutil.ReadAll(r)
+	fmt.Println(string(content2)) // abc
+}
+```
+
+</div>
+</details>
