@@ -1241,3 +1241,151 @@ func IoutilExample() {
 
 </div>
 </details>
+
+<details>
+<summary> (ex-2) 네트워크 관련 패키지 </summary>
+<div markdown="ex-2">
+
+**1. http**
+
+- http에서 리퀘스트를 보낼 때 NewRequest(method string, url string, body io.Reader)를 사용함
+
+- \*http.Client의 주소값을 갖는 http.Client{} struct를 정의하고 이 객체를 통해 .Do, .Get, .Post 등을 실행할 수 있다
+
+```go
+package sub
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+)
+
+func HttpExample() {
+	// resp, _ := http.Get("https://nextjs-api-harry.herokuapp.com/api/detail-post/1/")
+	// defer resp.Body.Close()
+
+	base, _ := url.Parse("http://example.com")
+	reference, _ := url.Parse("/test?a=1&b=2")
+	fmt.Println(base) // http://example.com
+	endpoint := base.ResolveReference(reference).String()
+	fmt.Println(endpoint) // http://example.com/test?a=1&b=2
+
+	req, _ := http.NewRequest("GET", endpoint, nil)
+	req.Header.Add("If-None-Match", `W/"wyzzy`)
+	q := req.URL.Query()
+	fmt.Println(q) // map[a:[1] b:[2]]
+	q.Add("c", "3")
+	fmt.Println(q, q.Encode()) // map[a:[1] b:[2] c:[3]], a=1&b=2&c=3
+
+	var client *http.Client = &http.Client{}
+	resp, _ := client.Do(req)
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(body))
+}
+```
+
+**2. json.Unmarshal, json.Marshal**
+
+```go
+package sub
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+type Person struct {
+	Name      string   `json:"name"`      // 가리고 싶을 땐 "-"로 표기
+	Age       int      `json:"age"`       // int를 string로 표기하고 싶을 땐 ,와 함께 string을 정의
+	Nicknames []string `json:"nicknames"` // omitempty로 해당 값이 없다면 표기하지 않을 수도 있다
+}
+
+func (p Person) MarshalJSON() ([]byte, error) {
+	v, err := json.Marshal(&struct {
+		Name string
+	}{
+		Name: "Mr." + p.Name,
+	})
+	return v, err
+}
+
+func JsonExample() {
+	b := []byte(`{"name":"Mike", "age":20, "nicknames":["a","b","c"]}`)
+	var p Person
+	if err := json.Unmarshal(b, &p); err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(p.Name, p.Age, p.Nicknames) // Mike 20 [a b c]
+
+	v, _ := json.Marshal(p)
+	fmt.Println(string(v))
+	// before `json`setting : {"Name":"Mike","Age":20,"Nicknames":["a","b","c"]}
+	// after : {"name":"Mike","age":20,"nicknames":["a","b","c"]}
+	// even after custom Marshal func => {"Name":"Mr.Mike"}
+}
+```
+
+**3. hmac**
+
+- [go의 공식문서](https://golang.org/pkg/crypto/hmac/)에서 추천하는 hmac의 사용법
+
+```go
+// ValidMAC reports whether messageMAC is a valid HMAC tag for message.
+func ValidMAC(message, messageMAC, key []byte) bool {
+	mac := hmac.New(sha256.New, key)
+	mac.Write(message)
+	expectedMAC := mac.Sum(nil)
+	return hmac.Equal(messageMAC, expectedMAC)
+}
+```
+
+- 이를 토대로 간이 인증 서버를 구현
+
+```go
+package sub
+
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+)
+
+var DB = map[string]string{
+	"User1Key": "User1Secret",
+	"User2Key": "User2Secret",
+}
+
+func Server(apiKey, sign string, data []byte) bool {
+	apiSecret := DB[apiKey]
+	h := hmac.New(sha256.New, []byte(apiSecret))
+	h.Write(data)
+	expectedHMAC := hex.EncodeToString(h.Sum(nil))
+	if sign == expectedHMAC {
+		return true
+	} else {
+		return false
+	}
+}
+
+func APIAuthexample() {
+	const apiKey = "User1Key"
+	const apiSecret = "User1Secret"
+
+	data := []byte("data")
+	h := hmac.New(sha256.New, []byte(apiSecret))
+	h.Write(data)
+	sign := hex.EncodeToString(h.Sum(nil))
+
+	fmt.Println(sign) // 076b55e7f7e126...
+
+	fmt.Println(Server(apiKey, sign, data)) // true
+}
+```
+
+</div>
+</details>
