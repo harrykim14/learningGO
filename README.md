@@ -1389,3 +1389,175 @@ func APIAuthexample() {
 
 </div>
 </details>
+
+<details>
+<summary> (ex-3) 편리한 서드파티 패키지 </summary>
+<div markdown="ex-3">
+
+**1. Semaphore**
+
+```go
+package sub
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"golang.org/x/sync/semaphore"
+)
+
+/*
+세마포어(Semaphore) : 공유된 자원의 데이터를 여러 프로세스가 접근하는 것을 막는 것
+뮤텍스(Mutex) : 공유된 자원의 데이터를 여러 쓰레드가 접근하는 것을 막는 것
+*/
+
+var s *semaphore.Weighted = semaphore.NewWeighted(1)
+
+func longProcess(ctx context.Context) {
+	isAcquire := s.TryAcquire(1)
+	if !isAcquire {
+		fmt.Println("Could not get lock")
+		return
+	}
+	// if err := s.Acquire(ctx, 1); err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+	defer s.Release(1)
+
+	fmt.Println("Wait...")
+	time.Sleep(1 * time.Second)
+	fmt.Println("Done")
+}
+
+func SemaphoreExample() {
+	ctx := context.TODO()
+
+	go longProcess(ctx)
+	go longProcess(ctx)
+	go longProcess(ctx)
+	time.Sleep(2 * time.Second)
+
+	go longProcess(ctx)
+	time.Sleep(5 * time.Second)
+}
+```
+
+**2. ini**
+
+```go
+// ini.go
+package sub
+
+import (
+	"fmt"
+
+	"gopkg.in/ini.v1"
+)
+
+type ConfigList struct {
+	Port      int
+	DBname    string
+	SQLDriver string
+}
+
+var Config ConfigList
+
+func init() {
+	cfg, _ := ini.Load("config.ini")
+	Config = ConfigList{
+		Port:      cfg.Section("web").Key("port").MustInt(),
+		DBname:    cfg.Section("db").Key("name").MustString("example.sql"),
+		SQLDriver: cfg.Section("db").Key("driver").String(),
+	}
+}
+
+func IniExample() {
+	fmt.Printf("%T %v\n", Config.Port, Config.Port)
+	fmt.Printf("%T %v\n", Config.DBname, Config.DBname)
+	fmt.Printf("%T %v\n", Config.SQLDriver, Config.SQLDriver)
+}
+```
+
+**3. talib**
+
+```go
+package sub
+
+import (
+	"fmt"
+
+	"github.com/markcheno/go-quote"
+	"github.com/markcheno/go-talib"
+)
+
+func TalibExample() {
+	spy, _ := quote.NewQuoteFromYahoo(
+		"spy", "2018-04-01", "2019-01-01", quote.Daily, true)
+	fmt.Print(spy.CSV())
+	// Rsi란 종가의 변화로 추세 강도를 측정하는 선행지표
+	// 헌재 추세강도가 어떠한지를 0~100퍼센트의 수치로 보여줌
+	rsi2 := talib.Rsi(spy.Close, 2)
+	fmt.Println(rsi2)
+	// Ema란 지수이동평균으로 과거 값(여기서는 14일)을 계산대상으로 단기변동성을 알 수 있는 값
+	// Wma는 가중이동평균으로 현재의 추세를 알 수 있는 값
+	mva := talib.Ema(spy.Close, 14)
+	fmt.Println(mva)
+}
+```
+
+**4. websocket으로 실시간 비트코인 가격 가져오기**
+
+```go
+package sub
+
+import (
+	"log"
+	"net/url"
+
+	"github.com/gorilla/websocket"
+)
+
+type JsonRPC2 struct {
+	Version string      `json:"jsonrpc"`
+	Method  string      `json:"method"`
+	Params  interface{} `json:"params"`
+	Result  interface{} `json:"result,omitempty"`
+	Id      *int        `json:"id,omitempty"`
+}
+type SubscribeParams struct {
+	Channel string `json:"channel"`
+}
+
+func Websocket() {
+	u := url.URL{Scheme: "wss", Host: "ws.lightstream.bitflyer.com", Path: "/json-rpc"}
+	log.Printf("connecting to %s", u.String())
+
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+	}
+	defer c.Close()
+
+	if err := c.WriteJSON(&JsonRPC2{Version: "2.0", Method: "subscribe", Params: &SubscribeParams{"lightning_ticker_BTC_JPY"}}); err != nil {
+		log.Fatal("subscribe:", err)
+		return
+	}
+
+	for {
+		message := new(JsonRPC2)
+		if err := c.ReadJSON(message); err != nil {
+			log.Println("read:", err)
+			return
+		}
+
+		if message.Method == "channelMessage" {
+			log.Println(message.Params)
+		}
+	}
+}
+```
+
+</div>
+</details>
